@@ -1,18 +1,25 @@
 psentinel
 =========
-Is a flexible and small  daemon (~40kb)  that check and manage back-end nodes declared in a HAProxy
- and interact with it for automatic up/down
-The idea behind psentinel is pretty simple: insert a daemon between haproxy and the back-end service
-to decouple the service from the direct check.
-Psentinel can execute a shell script/executable to check the monitored application and reply
-to haproxy about the state.
-It can be also manually disabled.
+Is a flexible and small  daemon (~40kb)  that checks and manages back-end nodes declared in a HAProxy
+ and interacts with it for automatic up/down
+The idea behind psentinel is pretty simple: runs between haproxy and a back-end application
+to decouple it from the haproxy direct check.
+Psentinel can execute a shell script/executable to check the back-end application and reply
+to haproxy about the running state.
+It can be also manually disabled, very usefull for manual or automatic deploy and continuous integration
 
 Installation
 ============
 
-to install : make && make install 
-to execute : psentinel -d 
+From root user:
+
+to compile/install : make && make install
+ 
+to execute as daemon  : psentinel -d 
+
+Probably is better to create and execute from an unprivileged user 
+(please read the psentinel.pdf for more info)
+
 
 Action
 ======
@@ -37,4 +44,4 @@ or pause all the pausable services
 
 psentinel -c pause
 
-Please read the documentation pdf for more..
+Please read the psentinel.pdf for more..
