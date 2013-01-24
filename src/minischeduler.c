@@ -38,8 +38,19 @@ void timer_handler(sigval_t args)
 
 	if (status)
 	{
-		Log (LOG_ERR,"chk_function returned an error state. Disabling service\n");
+		if (connection->timer.chk_status==0)
+		{
+			Log (LOG_ERR,"chk_function returned an error state. Disabling service\n");
+		}
 
+
+	}
+	else
+	{
+		if (connection->timer.chk_status)
+		{
+			Log (LOG_ERR,"chk_function back to OK state. Re-enabling service\n");
+		}
 	}
 	connection->timer.chk_status=status;
 	pthread_mutex_unlock(&(connection->timer.chk_mutex));

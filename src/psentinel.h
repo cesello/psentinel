@@ -57,7 +57,7 @@ extern "C" {
 #define MSG_DOWN_TEST_FAILED 	"Application Test Failed"
 #define MSG_SERVICE_UNVL 		503
 #define MSG_SERVICE_UNVL_S 		"User disabled"
-#define VERSION					"0.2.0 Rev.142"
+#define VERSION					"0.2.0 Rev.144"
 #define ECHOMSG					"HTTP/1.0 %d %s - " PROGRAM_NAME " Ver." VERSION "\r\n"
 
 
