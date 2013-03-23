@@ -119,6 +119,7 @@ char ** split(const char * string)
 unsigned short int reply_simple(void * conn, int port_index, int socket_index)
 {
 	char * temp_buffer;
+	int chk_status;
 
 	configuration * connections = (configuration *) conn;
 
@@ -141,10 +142,25 @@ unsigned short int reply_simple(void * conn, int port_index, int socket_index)
 		}
 	}
 
-	if (connections->single_conn[port_index].timer.chk_status)
+	chk_status=connections->single_conn[port_index].timer.chk_status;
+
+	if (chk_status != CHKSTATUS_OK)
 	{
-		sprintf(temp_buffer, ECHOMSG, MSG_DOWN, MSG_DOWN_TEST_FAILED);
-		return 0;
+		switch (chk_status)
+		{
+			case CHKSTATUS_SERVICE_DOWN:
+				sprintf(temp_buffer, ECHOMSG, MSG_DOWN, MSG_DOWN_SERVICE_DOWN_S);
+			break;
+			case CHKSTATUS_CHECK_FAILS:
+				sprintf(temp_buffer, ECHOMSG, MSG_DOWN, MSG_DOWN_TEST_FAILED_S);
+			break;
+			case CHKSTATUS_SERVICE_PAUSING:
+				sprintf(temp_buffer, ECHOMSG, MSG_APPLICTION_SLEEP, MSG_APPLICTION_SLEEP_S);
+			break;
+			default:
+				sprintf(temp_buffer, ECHOMSG, MSG_DOWN, MSG_DOWN_UNKNOWN_S);
+
+		}
 	}
 
 	return 0;
@@ -350,12 +366,14 @@ int cmd_shell_status(configuration * connections, char * buffer, struct shell_co
 {
 #define LIST_PID          PROGRAM_NAME " process ID: %d \n"
 #define LIST_FLAG         "Pausing state: %s \n\n"
-#define LIST_STATUS       "Service [%s]\n Listening port: %d\n Port type: %s\n Port status: %s\n Active connections: %d\n Connections counter: %d \n Check timer params\n ------------------\n  Command: %s\n  Check interval: %d sec\n  Last check return status: %d\n  Last time call  %02d:%02d:%02d\n  Checks count: %d\n  Calls in queue: %d\n\n"
+#define LIST_STATUS       "Service [%s]\n Listening port: %d\n Port type: %s\n Port status: %s\n Active connections: %d\n Connections counter: %d \n Check timer params\n ------------------\n  CheckTest status: %s\n  Command: %s\n  Check interval: %d sec\n  Last check return status: %d\n  Last time call  %02d/%02d/%d %02d:%02d:%02d\n  Checks count: %d\n  Calls in queue: %d\n\n"
 #define LIST_STATUS_WT    "Service [%s]\n Listening port: %d\n Port type: %s\n Port status: %s\n Active connections: %d\n Connections counter: %d \n\n"
 #define LIST_ENABLED      "ENABLED"
 #define LIST_DISABLED     "DISABLED"
 #define LIST_PAUSABLE     "pausable"
 #define LIST_NON_PAUSABLE "not pausable"
+#define CHECK_ENABLED      "ENABLED"
+#define CHECK_DISABLED     "DISABLED"
 
 	va_list ap;
 	int num_connections = 0;
@@ -363,6 +381,7 @@ int cmd_shell_status(configuration * connections, char * buffer, struct shell_co
 	int port = 0;
 	char port_type[100];
 	char port_status[100];
+	char check_status[100];
 	char pause_status[100];
 	int pos, num;
 	struct tm *tm;
@@ -417,6 +436,11 @@ int cmd_shell_status(configuration * connections, char * buffer, struct shell_co
 			else
 				strcpy(port_status, LIST_ENABLED);
 
+			if (connections->single_conn[i].timer.disabled)
+				strcpy(check_status, CHECK_DISABLED);
+			else
+				strcpy(check_status, CHECK_ENABLED);
+
 
 
 			if ((strlen(arg_command)==0) || (strcmp(arg_command,connections->single_conn[i].service_name)==0))
@@ -427,9 +451,9 @@ int cmd_shell_status(configuration * connections, char * buffer, struct shell_co
 					tm = localtime(&(connections->single_conn[i].timer.last_call));
 					args = (shell_args_t *) connections->single_conn[i].timer.chk_arguments.sival_ptr;
 					num = sprintf(buffer + pos, LIST_STATUS, connections->single_conn[i].service_name, port, port_type,
-						port_status, num_connections, connections->single_conn[i].counter, args->script_name,
+						port_status, num_connections, connections->single_conn[i].counter, check_status,args->script_name,
 						connections->single_conn[i].timer.check_interval, connections->single_conn[i].timer.chk_status,
-						tm->tm_hour, tm->tm_min, tm->tm_sec, connections->single_conn[i].timer.counter,
+						tm->tm_mday,tm->tm_mon,tm->tm_year+1900,tm->tm_hour, tm->tm_min, tm->tm_sec, connections->single_conn[i].timer.counter,
 						connections->single_conn[i].timer.inqueue);
 				}
 				else
@@ -476,6 +500,165 @@ int cmd_shell_dobby(configuration * connections, char * buffer, struct shell_com
 	#define DOBBY "Dobby has got a sock\nMaster threw it, and Dobby caught it\nand Dobby.. Dobby is free.\n\n"
 	sprintf(buffer,DOBBY);
 	return 0;
+}
+
+int cmd_shell_test(configuration * connections, char * buffer, struct shell_commands * valid_commands, ...)
+{
+	return 0;
+}
+int cmd_shell_disable_test(configuration * connections, char * buffer, struct shell_commands * valid_commands, ...)
+{
+#define TEST_DISABLE_ERROR 			 "Error disabling test. Please specify service name to disable\n\n"
+#define TEST_DIS_SERVICE_NOT_FOUND   "Error disabling test . Service name not found in configuration file\n\n"
+#define TEST_DIS_SERVICE_NO_FUNCTION "Error disabling. Service [%s] do not have check function\n\n"
+#define TEST_DISABLE_OK 				"Test check for  [%s] disabled.\n\n"
+
+	va_list ap;
+	char arg_command[COMMAND_BUFFER_SIZE], *parg;
+	struct shell_commands * valid_command;
+
+	valid_command = valid_commands;
+	va_start (ap, valid_commands);
+
+	parg = va_arg(ap,char *);
+
+	if (parg)
+	{
+		strncpy(arg_command, parg, COMMAND_BUFFER_SIZE);
+	}
+	else
+	{
+
+		sprintf(buffer, TEST_DISABLE_ERROR);
+		va_end(ap);
+		return 0;
+	}
+
+	do
+	{
+		if (strlen(arg_command))
+		{
+			int i = 0;
+			while (connections->single_conn[i].service_name != NULL && i < LISTENING_PORTS)
+			{
+				if (strcmp(connections->single_conn[i].service_name, arg_command) == 0)
+				{
+					if (connections->single_conn[i].timer.chk_function)
+					{
+						pthread_mutex_lock(&(connections->single_conn[i].timer.chk_mutex));
+						connections->single_conn[i].timer.disabled = 1;
+						connections->single_conn[i].timer.chk_status=0;
+						pthread_mutex_unlock(&(connections->single_conn[i].timer.chk_mutex));
+						sprintf(buffer, TEST_DISABLE_OK, arg_command);
+						va_end(ap);
+						return 0;
+					}
+					else
+					{
+						sprintf(buffer, TEST_DIS_SERVICE_NO_FUNCTION, arg_command);
+						va_end(ap);
+						return 0;
+					}
+				}
+				i++;
+			}
+		}
+		else
+		{
+			sprintf(buffer, TEST_DISABLE_ERROR);
+			va_end(ap);
+			return 0;
+
+		}
+		valid_command++;
+	} while (valid_command->token != NULL);
+
+	if (strlen(arg_command))
+	{
+		//asked a service that does not exists
+		sprintf(buffer, TEST_DIS_SERVICE_NOT_FOUND);
+	}
+
+	va_end(ap);
+
+	return 0;
+}
+int cmd_shell_enable_test(configuration * connections, char * buffer, struct shell_commands * valid_commands, ...)
+{
+#define TEST_ENABLE_ERROR 		"Error enabling test. Please specify service name to enable\n\n"
+#define TEST_SERVICE_NOT_FOUND   "Error enabling test. Service name not found in configuration file\n\n"
+#define TEST_SERVICE_NO_FUNCTION "Error enabling. Service [%s] do not have check function\n\n"
+#define TEST_ENABLE_OK 			"Check test for [%s] enabled.\n\n"
+
+	va_list ap;
+	char arg_command[COMMAND_BUFFER_SIZE], *parg;
+	struct shell_commands * valid_command;
+
+	valid_command = valid_commands;
+	va_start (ap, valid_commands);
+
+	parg = va_arg(ap,char *);
+
+	if (parg)
+	{
+		strncpy(arg_command, parg, COMMAND_BUFFER_SIZE);
+	}
+	else
+	{
+
+		sprintf(buffer, TEST_ENABLE_ERROR);
+		va_end(ap);
+		return 0;
+	}
+
+	do
+	{
+		if (strlen(arg_command))
+		{
+			int i = 0;
+			while (connections->single_conn[i].service_name != NULL && i < LISTENING_PORTS)
+			{
+				if (strcmp(connections->single_conn[i].service_name, arg_command) == 0)
+				{
+					if (connections->single_conn[i].timer.chk_function)
+					{
+						pthread_mutex_lock(&(connections->single_conn[i].timer.chk_mutex));
+						connections->single_conn[i].timer.disabled = 0;
+						pthread_mutex_unlock(&(connections->single_conn[i].timer.chk_mutex));
+						sprintf(buffer, TEST_ENABLE_OK, arg_command);
+						va_end(ap);
+						return 0;
+					}
+					else
+					{
+						sprintf(buffer, TEST_SERVICE_NO_FUNCTION, arg_command);
+						va_end(ap);
+						return 0;
+					}
+				}
+				i++;
+			}
+		}
+		else
+		{
+			sprintf(buffer, TEST_ENABLE_ERROR);
+			va_end(ap);
+			return 0;
+
+		}
+		valid_command++;
+	} while (valid_command->token != NULL);
+
+	if (strlen(arg_command))
+	{
+		//asked a service that does not exists
+		sprintf(buffer, TEST_SERVICE_NOT_FOUND);
+	}
+
+	va_end(ap);
+
+	return 0;
+
 }
 //reply function used to set advanced parameters and future exensions
 //using unix socket
@@ -527,8 +710,23 @@ unsigned short int single_command_shell(void * conn, int port_index, int socket_
 			{ "status",
 			  ARG_NAME,
 			  ARG_NULL,
-			  "status [command] \nList information about service \n\n",
+			  "status [INI service name] \nList information about service \n\n",
 			  cmd_shell_status },
+			{ "test",
+			  ARG_NAME,
+			  ARG_NULL,
+			  "test <INI service name> \n Force a test execution for a specific service \n\n",
+			  cmd_shell_test },
+			{ "disable_test",
+			  ARG_NAME,
+			  ARG_NULL,
+			  "disable_test <INI service name> \n Disable the check test execution for a specific service  \n\n",
+			  cmd_shell_disable_test },
+		    { "enable_test",
+			  ARG_NAME,
+			  ARG_NULL,
+			  "enable_test <INI service name> \n Enable the check test execution for a specific service \n\n",
+			  cmd_shell_enable_test },
 			{
 				"dobby",
 				ARG_EASTER,

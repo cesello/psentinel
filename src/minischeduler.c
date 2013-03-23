@@ -29,12 +29,21 @@ void timer_handler(sigval_t args)
 {
 	struct single_connection * connection = (struct single_connection *) args.sival_ptr;
 	unsigned short int status;
-	connection->timer.counter++;
-	connection->timer.last_call=time(NULL);
+
 	connection->timer.inqueue++;
 	pthread_mutex_lock(&(connection->timer.chk_mutex));
-	connection->timer.inqueue--;
-	status=connection->timer.chk_function(connection->timer.chk_arguments);
+
+	if (connection->timer.disabled==0)
+	{
+		connection->timer.counter++;
+		connection->timer.last_call=time(NULL);
+		status=connection->timer.chk_function(connection->timer.chk_arguments);
+	}
+	else
+	{
+		//the check script is disabled so return always 0=OK
+		status=0;
+	}
 
 	if (status)
 	{
@@ -53,6 +62,7 @@ void timer_handler(sigval_t args)
 		}
 	}
 	connection->timer.chk_status=status;
+	connection->timer.inqueue--;
 	pthread_mutex_unlock(&(connection->timer.chk_mutex));
 }
 

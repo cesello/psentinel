@@ -48,16 +48,26 @@ extern "C" {
 #define GENERAL_SETUP_ENTRY "general"
 #define DEFAULT_CONFIG_FILE "/etc/" PROGRAM_NAME "/" PROGRAM_NAME ".cfg"
 
+//status code returned by check scripts
+
+#define CHKSTATUS_OK				0
+#define CHKSTATUS_SERVICE_DOWN  	1
+#define CHKSTATUS_CHECK_FAILS		2
+#define CHKSTATUS_SERVICE_PAUSING	3
 
 #define MSG_OK	 	 	 		200
 #define MSG_OK_S 	 	 		"OK"
 #define MSG_DOWN 	 	 		500
 #define MSG_DOWN_S 	 	 		"System error"
 #define MSG_DOWN_TOOMANY_S 		"Too many clients"
-#define MSG_DOWN_TEST_FAILED 	"Application Test Failed"
+#define MSG_DOWN_TEST_FAILED_S 	"Application Test Failed"
+#define MSG_DOWN_SERVICE_DOWN_S	"Application Service Down"
+#define MSG_DOWN_UNKNOWN_S	 	"Check Status Unknown"
+#define MSG_APPLICTION_SLEEP	502
+#define MSG_APPLICTION_SLEEP_S	"Application Service Sleep"
 #define MSG_SERVICE_UNVL 		503
 #define MSG_SERVICE_UNVL_S 		"User disabled"
-#define VERSION					"0.2.0 Rev.144"
+#define VERSION					"0.3.583 Rev.152"
 #define ECHOMSG					"HTTP/1.0 %d %s - " PROGRAM_NAME " Ver." VERSION "\r\n"
 
 
@@ -69,6 +79,7 @@ struct timer_action
 {
 	timer_t 			timerid;
 	time_t 				last_call;
+	unsigned short int 	disabled;
 	int					counter;
 	int 				inqueue;
 	int 				check_interval;
