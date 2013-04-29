@@ -185,6 +185,11 @@ void term_signal(int sig)
 	exit(status);
 }
 
+void pipe_signal(int sig)
+{
+	Log(LOG_DEBUG, "SIGPIPE trapped.Ignore it\n");
+}
+
 int initialize_timers(configuration * connections)
 {
 	int configured_ports = connections->last_slot;
@@ -214,6 +219,7 @@ int main(int argc, char **argv)
 	int status;
 	struct sigaction usr_action;
 	struct sigaction term_action;
+	struct sigaction pipe_action;
 	sigset_t block_mask;
 
 	int socks_status;
@@ -276,6 +282,10 @@ int main(int argc, char **argv)
 	term_action.sa_mask = block_mask;
 	term_action.sa_flags = 0;
 	sigaction(SIGTERM, &term_action, NULL);
+	pipe_action.sa_handler = pipe_signal;
+	pipe_action.sa_mask = block_mask;
+	pipe_action.sa_flags = 0;
+	sigaction(SIGPIPE, &pipe_action, NULL);
 
 	Log(LOG_INFO, "Init networking\n");
 

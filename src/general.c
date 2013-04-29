@@ -453,7 +453,7 @@ int cmd_shell_status(configuration * connections, char * buffer, struct shell_co
 					num = sprintf(buffer + pos, LIST_STATUS, connections->single_conn[i].service_name, port, port_type,
 						port_status, num_connections, connections->single_conn[i].counter, check_status,args->script_name,
 						connections->single_conn[i].timer.check_interval, connections->single_conn[i].timer.chk_status,
-						tm->tm_mday,tm->tm_mon,tm->tm_year+1900,tm->tm_hour, tm->tm_min, tm->tm_sec, connections->single_conn[i].timer.counter,
+						tm->tm_mday,tm->tm_mon+1,tm->tm_year+1900,tm->tm_hour, tm->tm_min, tm->tm_sec, connections->single_conn[i].timer.counter,
 						connections->single_conn[i].timer.inqueue);
 				}
 				else
