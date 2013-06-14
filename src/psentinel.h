@@ -67,7 +67,7 @@ extern "C" {
 #define MSG_APPLICTION_SLEEP_S	"Application Service Sleep"
 #define MSG_SERVICE_UNVL 		503
 #define MSG_SERVICE_UNVL_S 		"User disabled"
-#define VERSION					"0.3.583 Rev.152"
+#define VERSION					"0.4.607 Rev.160"
 #define ECHOMSG					"HTTP/1.0 %d %s - " PROGRAM_NAME " Ver." VERSION "\r\n"
 
 

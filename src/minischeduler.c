@@ -49,7 +49,7 @@ void timer_handler(sigval_t args)
 	{
 		if (connection->timer.chk_status==0)
 		{
-			Log (LOG_ERR,"chk_function returned an error state. Disabling service\n");
+			Log (LOG_ERR,"chk_function for service [%s] returned an error state. Disabling service\n",connection->service_name);
 		}
 
 
@@ -58,7 +58,7 @@ void timer_handler(sigval_t args)
 	{
 		if (connection->timer.chk_status)
 		{
-			Log (LOG_ERR,"chk_function back to OK state. Re-enabling service\n");
+			Log (LOG_ERR,"chk_function back for service [%s] returned to OK state. Re-enabling service\n",connection->service_name);
 		}
 	}
 	connection->timer.chk_status=status;

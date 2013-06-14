@@ -46,6 +46,7 @@ unsigned char to_printhelp = 1;
 char * config_file = NULL;
 char * pid_file = NULL;
 char * socket_file = NULL;
+char * default_working_dir =NULL;
 
 /* When a SIGUSR1 signal arrives, set this variable.   */
 volatile sig_atomic_t sleep_status = 1;
@@ -54,6 +55,22 @@ unsigned short int pausable_chk_port = 0;
 unsigned short int chk_port = 0;
 int log_level = LOG_ERR;
 configuration connections;
+
+char * safe_getcwd()
+{
+	int size = 100;
+	char *buffer = (char *) malloc(size*sizeof(char));
+
+	while (1)
+	{
+	  char *value = getcwd (buffer, size);
+	  if (value != 0)
+		return buffer;
+	  size *= 2;
+	  free (buffer);
+	  buffer = (char *) malloc (size*sizeof(char));
+	}
+}
 
 /*
  This function is called for daemonize the proces only
@@ -94,6 +111,8 @@ int daemonize(configuration * connections)
 		/* Log the failure */
 		return (DAEMONIZE_FAILURE);
 	}
+
+	default_working_dir=safe_getcwd();
 
 	/* Change the current working directory */
 	if ((chdir("/")) < 0)
@@ -268,8 +287,19 @@ int main(int argc, char **argv)
 				printf("Starting as a daemon.Parent exit\n");
 				exit(EXIT_SUCCESS);
 				break;
+			case DAEMONIZE_INDAEMON:
+					Log(LOG_INFO, "Running as Daemon.Log level: %d\n",log_level);
+					setlogmask(LOG_UPTO (log_level));
+					openlog(PROGRAM_NAME, LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+					Log(LOG_DEBUG,"Working dir: %s\n",default_working_dir);
+				break;
 		}
 
+	}
+	else
+	{
+		default_working_dir=safe_getcwd();
+		Log(LOG_DEBUG,"Working dir: %s\n",default_working_dir);
 	}
 
 	/* Establish the signal handler.  */
@@ -291,8 +321,12 @@ int main(int argc, char **argv)
 
 	status = initialize_network(&connections);
 
+
 	Log(LOG_INFO, "Init timers\n");
 	status = initialize_timers(&connections);
+
+	Log(LOG_INFO,"Init data file\n");
+	status = init_datafile(&connections);
 
 	/* The Big Loop */
 	while (1)

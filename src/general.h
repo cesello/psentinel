@@ -31,6 +31,8 @@ int init(int argc ,char **argv,configuration * connections);
 int clean_all(configuration * connections);
 void print_help(int argc ,char **argv);
 int execute_command(configuration * connections);
+int update_datafile(const configuration * connections,int slot);
+int init_datafile(configuration * connections);
 
 #ifdef __cplusplus
 }
